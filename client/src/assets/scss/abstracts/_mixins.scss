@@ -1,0 +1,6 @@
+@use "sass:color";
+
+// Función helper para oscurecer colores (reemplaza a darken)
+@function shade($color, $percent) {
+    @return color.adjust($color, $lightness: -1 * $percent);
+}

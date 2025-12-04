@@ -1,0 +1,12 @@
+// 1. Abstracts (Configuración y Herramientas)
+// Usamos 'as *' para cargar variables/mixins sin namespace si fuera necesario aquí,
+// aunque Vite ya los inyecta en componentes, esto asegura disponibilidad global si agregas estilos aquí.
+@use 'abstracts/variables' as *;
+@use 'abstracts/mixins' as *;
+
+// 2. Base (Estilos genéricos que generan CSS)
+@use 'base/reset';
+@use 'base/typography';
+
+// Más adelante importaremos componentes globales así:
+// @use '../components/common/some-global-style';

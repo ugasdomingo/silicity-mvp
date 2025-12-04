@@ -1,0 +1,37 @@
+// Importar variables para poder usarlas aquí
+@use '../abstracts/variables' as *;
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: $color-bg;
+    color: $color-text;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+.pages {
+    padding: 1rem 4rem;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s;
+}
+
+ul {
+    list-style: none;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+}
