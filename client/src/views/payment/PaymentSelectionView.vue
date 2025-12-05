@@ -136,7 +136,7 @@ const handle_offline_pay = async () => {
 </script>
 
 <style scoped lang="scss">
-@import '../../assets/scss/abstracts/variables';
+@use '../../assets/scss/abstracts/variables';
 
 .payment-container {
     display: flex;

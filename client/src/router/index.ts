@@ -45,6 +45,12 @@ const routes = [
         meta: { requires_auth: true },
         children: [
             {
+                path: 'admin',
+                name: 'admin-dashboard',
+                component: () => import('../views/dashboard/admin/AdminDashboardView.vue'),
+                meta: { roles: ['Admin'] } // Meta para el guard
+            },
+            {
                 path: 'dashboard', // /app/dashboard
                 name: 'dashboard',
                 component: () => import('../views/dashboard/DashboardView.vue'),
@@ -55,7 +61,36 @@ const routes = [
                 // Placeholder por ahora, puedes crear ProfileView.vue luego
                 component: () => import('../views/dashboard/ProfileView.vue'),
             },
-            // Agregaremos scholarships, projects, etc. aquí
+            {
+                path: 'appointments', // /app/appointments
+                name: 'appointments',
+                component: () => import('../views/dashboard/student/appointments/AppointmentsView.vue'),
+                // meta: { roles: ['student', 'talent'] } // Opcional
+            },
+            {
+                path: 'study-groups',
+                name: 'study-groups-list',
+                // Placeholder temporal hasta que crees la vista de lista
+                component: () => import('../views/dashboard/student/study-groups/StudyGroupsListView.vue'),
+            },
+            {
+                path: 'study-groups/:id',
+                name: 'group-chat',
+                component: () => import('../views/dashboard/student/study-groups/GroupChatView.vue'),
+                props: true
+            },
+            {
+                path: 'projects/create',
+                name: 'create-project',
+                component: () => import('../views/dashboard/company/projects/CreateProjectView.vue'),
+                meta: { roles: ['company', 'vc'] } // ✅ Protegido
+            },
+            {
+                path: 'company/projects/:id/deliveries',
+                name: 'project-deliveries',
+                component: () => import('../views/dashboard/company/projects/ProjectDeliveriesView.vue'),
+                meta: { roles: ['company', 'vc'] }
+            },
         ]
     },
     // Selección de Pago (Protegida pero fuera del layout principal o dentro, tú decides. 
@@ -90,9 +125,19 @@ router.beforeEach(async (to, from, next) => {
         return next({ name: 'login' });
     }
 
-    // Redirigir si ya está logueado
+    // Proteger rutas de administrador
+    if (to.meta.roles) {
+        const required_roles = to.meta.roles as string[];
+        const user_role = auth_store.user?.role;
+
+        if (!user_role || !required_roles.includes(user_role)) {
+            // Si no tiene permiso, lo mandamos al dashboard general
+            return next({ name: 'dashboard' });
+        }
+    }
+
+    // Redirigir si ya está logueado (Auth pages)
     if (auth_store.is_authenticated && ['login', 'register', 'home'].includes(to.name as string)) {
-        // Permitimos visitar home, pero login/register redirigen a dashboard
         if (to.name !== 'home') return next({ name: 'dashboard' });
     }
 

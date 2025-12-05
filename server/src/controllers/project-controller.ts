@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import Project from '../models/Project-model';
+import Project, { IProject } from '../models/Project-model';
 import ProjectApplication from '../models/Project-application-model';
 import StudyGroup from '../models/Study-group-model';
 import ProjectDelivery from '../models/Project-delivery-model';
@@ -7,6 +7,7 @@ import PeerReview from '../models/Peer-review-model';
 import User from '../models/User-model';
 import { AppError } from '../utils/app-error';
 import { send_response } from '../utils/response-handler';
+import { send_email } from '../utils/mailer';
 
 // ==========================================
 // 🏢 LOGICA EMPRESA
@@ -31,14 +32,37 @@ export const create_project = async (req: Request, res: Response, next: NextFunc
             return next(new AppError('Solo puedes publicar un proyecto cada 3 meses para garantizar calidad.', 400));
         }
 
+        const company = await User.findById(user_id)
+
         // 2. Crear
-        const project = await Project.create({
+        const project = new Project({
             company_id: user_id,
             ...req.body,
-            status: 'pending_review' // Siempre nace pendiente
+            status: 'pending_review'
         });
 
-        // 3. Notify Admin new project
+        await project.save();
+
+        // 🔔 NOTIFICACIÓN ADMIN: Nuevo Proyecto (Requiere Aprobación)
+        const admin_email = process.env.SMTP_USER as string;
+        await send_email(
+            admin_email,
+            `🚀 Nuevo Proyecto B2B: ${project.title}`,
+            'admin-alert',
+            {
+                alert_title: 'Solicitud de Proyecto Nuevo',
+                message_body: 'Una empresa ha enviado una propuesta de proyecto que requiere tu aprobación para publicarse.',
+                details: [
+                    { key: 'Empresa', value: company?.name || 'N/A' },
+                    { key: 'Título', value: project?.title || 'N/A' },
+                    { key: 'ID Proyecto', value: project?._id || 'N/A' },
+                    { key: 'Estado', value: 'Pendiente de Revisión' }
+                ],
+                // Link para que el Admin vaya directo a aprobar
+                action_url: `${process.env.CLIENT_URL}/app/dashboard/admin/projects`,
+                action_text: 'Revisar Proyecto'
+            }
+        );
 
 
         send_response(res, 201, 'Proyecto enviado a revisión.', project);
@@ -119,6 +143,31 @@ export const evaluate_delivery = async (req: Request, res: Response, next: NextF
     }
 };
 
+// @desc    Obtener entregas de un proyecto específico (Empresa)
+export const get_project_deliveries = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const company_id = (req as any).user_id;
+
+        // Validar propiedad
+        const project = await Project.findById(id);
+        if (!project) return next(new AppError('Proyecto no encontrado', 404));
+
+        if (project.company_id.toString() !== company_id) {
+            return next(new AppError('No tienes permiso para ver estas entregas', 403));
+        }
+
+        // Buscar entregas y poblar datos del equipo
+        const deliveries = await ProjectDelivery.find({ project_id: id })
+            .populate('group_id', 'name members topic') // Traemos el nombre del equipo
+            .sort('-submitted_at');
+
+        send_response(res, 200, 'Entregas obtenidas', deliveries);
+    } catch (error) {
+        next(error);
+    }
+};
+
 // ==========================================
 // 🎓 LOGICA TALENTO
 // ==========================================
@@ -180,15 +229,60 @@ export const deliver_project = async (req: Request, res: Response, next: NextFun
         if (!group) return next(new AppError('No formas parte de un equipo activo en este proyecto', 403));
 
         // 2. Crear entrega
-        await ProjectDelivery.create({
+        const delivery = new ProjectDelivery({
             project_id,
             group_id: group._id,
             documentation_link,
             repo_link,
             demo_link
         });
+        await delivery.save();
 
-        // Opcional: Notificar a empresa (aquí iría lógica de email)
+        // 3. Obtener datos para notificaciones
+        const project = await Project.findById(project_id);
+        if (!project) return next(new AppError('Proyecto no encontrado', 404));
+
+        const company_owner = await User.findById(project.company_id);
+        if (!company_owner) return next(new AppError('Empresa propietaria no encontrada', 404));
+
+        // 4. 🔔 NOTIFICACIONES
+
+        // A) Al Admin (Control)
+        const admin_email = process.env.SMTP_USER as string;
+        await send_email(
+            admin_email,
+            `📦 Entrega de Proyecto: ${group.name}`,
+            'admin-alert',
+            {
+                alert_title: 'Hito Cumplido: Proyecto Entregado',
+                message_body: 'Un equipo ha completado y enviado sus entregables finales.',
+                details: [
+                    { key: 'Equipo', value: group.name },
+                    { key: 'Proyecto', value: project.title },
+                    { key: 'Empresa', value: company_owner.name },
+                    { key: 'Repositorio', value: repo_link || 'N/A' }
+                ],
+                action_url: `${process.env.CLIENT_URL}/app/dashboard/admin/deliveries`,
+                action_text: 'Ver Entrega Admin'
+            }
+        );
+
+        // B) A la Empresa (Cliente)
+        await send_email(
+            company_owner.email,
+            `📦 Nueva Entrega Recibida: ${project.title}`,
+            'company-delivery-alert',
+            {
+                company_name: company_owner.name,
+                project_title: project.title,
+                group_name: group.name,
+                submission_date: new Date().toLocaleDateString('es-ES', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                }),
+                // Link directo al dashboard de la empresa para evaluar
+                action_url: `${process.env.CLIENT_URL}/app/dashboard/company/projects/${project._id}/deliveries`
+            }
+        );
 
         send_response(res, 201, 'Proyecto entregado exitosamente. Esperando evaluación.');
     } catch (error) {

@@ -4,7 +4,7 @@ import Invitation from '../models/Invitation-model';
 import { AppError } from '../utils/app-error';
 import { send_response } from '../utils/response-handler';
 import { generate_six_digits_code } from '../utils/code-generator';
-import { send_verification_email } from '../utils/mailer';
+import { send_email } from '../utils/mailer';
 import { get_login_user_data } from '../services/auth-service'; // Servicio refactorizado
 import jwt from 'jsonwebtoken';
 
@@ -62,9 +62,20 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             company_info,
         });
 
-        await send_verification_email(email, verification_code);
+        //Send Email
+        const verification_url = `${process.env.CLIENT_URL}/auth/verify?email=${encodeURIComponent(email)}&code=${verification_code}`;
 
-        send_response(res, 201, 'Cuenta creada. Te enviamos un enlace de verificación a tu correo.');
+        await send_email(
+            email,
+            '🔐 ¡Bienvenido a Silicity! Confirma tu email',
+            'verification-email',
+            {
+                user_name: name,
+                verification_url
+            }
+        );
+
+        send_response(res, 201, 'Te enviamos un enlace de verificación a tu correo.');
     } catch (error) {
         next(error);
     }
@@ -102,6 +113,26 @@ export const verify_email = async (req: Request, res: Response, next: NextFuncti
         user.is_verified = true;
         user.verification_code = '';
         await user.save();
+
+        // 🔔 NOTIFICACIÓN ADMIN: Nuevo Usuario Verificado
+        const admin_email = process.env.SMTP_USER as string;
+        await send_email(
+            admin_email,
+            `👤 Nuevo Usuario Verificado: ${user.name}`,
+            'admin-alert',
+            {
+                alert_title: 'Nuevo Usuario en Silicity',
+                message_body: 'Un nuevo usuario ha completado el proceso de verificación de correo electrónico.',
+                details: [
+                    { key: 'Nombre', value: user.name },
+                    { key: 'Email', value: user.email },
+                    { key: 'Rol Inicial', value: user.role }, // Importante para saber si es Empresa/VC
+                    { key: 'ID', value: user._id }
+                ],
+                action_url: `${process.env.CLIENT_URL}/app/dashboard/admin/users`, // Link directo al panel (futuro)
+                action_text: 'Ver Usuarios'
+            }
+        );
 
         // Generamos token para que entre directo (Auto-Login)
         const response_data = await get_login_user_data(user);

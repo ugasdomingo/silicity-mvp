@@ -6,31 +6,33 @@ import {
     get_my_company_projects,
     deliver_project,
     evaluate_delivery,
-    submit_peer_review
+    submit_peer_review,
+    get_project_deliveries
 } from '../controllers/project-controller';
 import {
     get_project_applications,
     form_project_team,
-    approve_project
+    approve_project,
 } from '../controllers/admin-project-controller';
 import { protect, restrict_to } from '../middleware/auth';
 
-const router = Router();
+const project_router = Router();
 
 // --- PUBLICO (Talento Logueado) ---
-router.get('/', protect, get_open_projects);
-router.post('/:id/apply', protect, restrict_to('talent'), apply_to_project);
-router.post('/:id/deliver', protect, restrict_to('talent'), deliver_project);
-router.post('/:id/peer-review', protect, restrict_to('talent'), submit_peer_review);
+project_router.get('/', protect, get_open_projects);
+project_router.post('/:id/apply', protect, restrict_to('talent'), apply_to_project);
+project_router.post('/:id/deliver', protect, restrict_to('talent'), deliver_project);
+project_router.post('/:id/peer-review', protect, restrict_to('talent'), submit_peer_review);
 
 // --- EMPRESA ---
-router.post('/', protect, restrict_to('company', 'vc'), create_project);
-router.get('/my-company-projects', protect, restrict_to('company', 'vc'), get_my_company_projects);
-router.post('/deliveries/:id/evaluate', protect, restrict_to('company', 'vc'), evaluate_delivery);
+project_router.post('/', protect, restrict_to('company', 'vc'), create_project);
+project_router.get('/my-company-projects', protect, restrict_to('company', 'vc'), get_my_company_projects);
+project_router.post('/deliveries/:id/evaluate', protect, restrict_to('company', 'vc'), evaluate_delivery);
+project_router.get('/deliveries/:id', protect, restrict_to('company', 'vc'), get_project_deliveries);
 
 // --- ADMIN ---
-router.get('/:id/applications', protect, restrict_to('Admin'), get_project_applications);
-router.post('/:id/form-team', protect, restrict_to('Admin'), form_project_team);
-router.patch('/:id/approve', protect, restrict_to('Admin'), approve_project);
+project_router.get('/:id/applications', protect, restrict_to('Admin'), get_project_applications);
+project_router.post('/:id/form-team', protect, restrict_to('Admin'), form_project_team);
+project_router.patch('/:id/approve', protect, restrict_to('Admin'), approve_project);
 
-export default router;
+export default project_router;

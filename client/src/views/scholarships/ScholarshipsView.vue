@@ -50,7 +50,7 @@ const scholarships_store = use_scholarships_store();
 const auth_store = use_auth_store();
 
 onMounted(() => {
-    scholarships_store.fetch_all();
+    scholarships_store.get_all_scholarships();
 });
 
 const can_apply = computed(() => {
@@ -79,7 +79,7 @@ const handle_apply = async (beca: any) => {
 
     // Llamada al store
     try {
-        await scholarships_store.apply(beca._id, motivation);
+        await scholarships_store.apply_to_scholarship(beca._id, motivation);
     } catch (e) {
         // Error manejado en store/interceptor
     }

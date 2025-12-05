@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f3f4f6;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+        <tr>
+            <td align="center">
+
+                <table width="600" cellpadding="0" cellspacing="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
+
+                    <tr>
+                        <td style="padding: 24px 40px; background-color: #1f2937; text-align: left;">
+                            <p
+                                style="margin: 0; color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                Silicity Admin</p>
+                            <h2 style="margin: 5px 0 0; color: #ffffff; font-size: 20px;">🔔 {{alert_title}}</h2>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
+                                {{message_body}}
+                            </p>
+
+                            <div
+                                style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px;">
+                                <h3
+                                    style="margin: 0 0 15px; color: #111827; font-size: 14px; text-transform: uppercase;">
+                                    Detalles del Evento:</h3>
+
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    {{#each details}}
+                                    <tr>
+                                        <td
+                                            style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; width: 40%;">
+                                            <strong>{{key}}:</strong>
+                                        </td>
+                                        <td
+                                            style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #111827; font-size: 14px; text-align: right;">
+                                            {{value}}
+                                        </td>
+                                    </tr>
+                                    {{/each}}
+                                </table>
+                            </div>
+
+                            {{#if action_url}}
+                            <div style="margin-top: 30px; text-align: center;">
+                                <a href="{{action_url}}"
+                                    style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+                                    {{action_text}}
+                                </a>
+                            </div>
+                            {{/if}}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td
+                            style="padding: 20px 40px; background-color: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                                Notificación automática del sistema Silicity.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

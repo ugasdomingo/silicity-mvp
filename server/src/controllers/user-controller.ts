@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User-model';
 import { AppError } from '../utils/app-error';
 import { send_response } from '../utils/response-handler';
+import { send_email } from '../utils/mailer';
+import TalentInterest from '../models/Talent-interest-model';
 
 // @desc    Obtener mi perfil
 export const get_my_profile = async (req: Request, res: Response, next: NextFunction) => {
@@ -75,6 +77,63 @@ export const schedule_psych_eval = async (req: Request, res: Response, next: Nex
         }
 
         send_response(res, 200, 'Cita registrada en el sistema');
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Ver empresas interesadas en mí
+export const get_my_interests = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const user_id = (req as any).user_id;
+        const interests = await TalentInterest.find({ talent_id: user_id, status: 'pending' })
+            .populate('company_id', 'name company_info.website company_info.description');
+
+        send_response(res, 200, 'Intereses recibidos', interests);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Responder a interés (Aceptar/Rechazar)
+export const respond_to_interest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const user_id = (req as any).user_id;
+        const interest_id = req.params.id;
+        const { action } = req.body; // 'accept' | 'reject'
+
+        const interest = await TalentInterest.findOne({ _id: interest_id, talent_id: user_id });
+        if (!interest) return next(new AppError('Solicitud no encontrada', 404));
+
+        if (interest.status !== 'pending') return next(new AppError('Ya respondiste a esta solicitud', 400));
+
+        interest.status = action === 'accept' ? 'accepted' : 'rejected';
+        await interest.save();
+
+        if (action === 'accept') {
+            // Obtener datos para el email
+            const talent = await User.findById(user_id);
+            const company = await User.findById(interest.company_id);
+
+            // 📧 Notificar a la Empresa con datos revelados
+            if (company && talent) {
+                await send_email(
+                    company.email,
+                    `🎉 Match: ${talent.name} aceptó tu interés`,
+                    'interest-accepted',
+                    {
+                        company_name: company.name,
+                        talent_name: talent.name,
+                        talent_email: talent.email,
+                        // Suponemos que el reporte está en el campo profile o psych_evaluation
+                        psych_report_url: talent.psych_evaluation?.report_url || 'Pendiente de carga',
+                        cv_url: '#' // En v2 implementaremos subida de archivos real
+                    }
+                );
+            }
+        }
+
+        send_response(res, 200, `Has ${action === 'accept' ? 'aceptado' : 'rechazado'} el interés.`);
     } catch (error) {
         next(error);
     }
