@@ -6,6 +6,7 @@
     <nav class="public-nav">
         <div class="container nav-content">
             <router-link :to="{ name: 'home' }" class="logo">
+                <img src="/logo.svg" alt="logo silicity">
                 Silicity
             </router-link>
 
@@ -52,6 +53,13 @@
     font-weight: 800;
     color: $color-primary;
     text-decoration: none;
+
+    img {
+        width: 40px;
+        height: 40px;
+        margin-right: 1rem;
+        object-fit: contain;
+    }
 }
 
 .nav-links {

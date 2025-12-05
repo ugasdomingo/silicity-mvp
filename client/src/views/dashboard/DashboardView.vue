@@ -88,6 +88,30 @@ const has_access = (required_role: string) => {
                     <p>Bienvenido a la comunidad Silicity.</p>
                 </div>
 
+                <div class="card">
+                    <h3>🎓 Becas</h3>
+                    <p>Explora oportunidades educativas.</p>
+                    <AppButtonComponent variant="outline" @click="$router.push({ name: 'scholarships' })">
+                        Ver Disponibles
+                    </AppButtonComponent>
+                </div>
+
+                <div class="card">
+                    <h3>💼 Proyectos</h3>
+                    <p>Participa en retos reales de empresas.</p>
+                    <AppButtonComponent variant="outline" @click="$router.push({ name: 'projects-list' })">
+                        Ver Tablón
+                    </AppButtonComponent>
+                </div>
+
+                <div class="card">
+                    <h3>👥 Comunidad</h3>
+                    <p>Únete a grupos de estudio.</p>
+                    <AppButtonComponent variant="outline" @click="$router.push({ name: 'study-groups-list' })">
+                        Explorar Grupos
+                    </AppButtonComponent>
+                </div>
+
                 <div v-if="has_access('student')" class="card">
                     <h3>🎓 Mis Becas</h3>
                     <p>Gestiona tus postulaciones.</p>

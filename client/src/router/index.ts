@@ -68,9 +68,20 @@ const routes = [
                 // meta: { roles: ['student', 'talent'] } // Opcional
             },
             {
+                path: 'scholarships',
+                name: 'scholarships',
+                component: () => import('../views/scholarships/ScholarshipsView.vue'),
+                meta: { roles: ['student', 'talent', 'user'] }
+            },
+            {
+                path: 'projects',
+                name: 'projects-list',
+                component: () => import('../views/dashboard/student/projects/ProjectsListView.vue'),
+                meta: { roles: ['student', 'talent', 'user'] }
+            },
+            {
                 path: 'study-groups',
                 name: 'study-groups-list',
-                // Placeholder temporal hasta que crees la vista de lista
                 component: () => import('../views/dashboard/student/study-groups/StudyGroupsListView.vue'),
             },
             {
@@ -89,6 +100,12 @@ const routes = [
                 path: 'company/projects/:id/deliveries',
                 name: 'project-deliveries',
                 component: () => import('../views/dashboard/company/projects/ProjectDeliveriesView.vue'),
+                meta: { roles: ['company', 'vc'] }
+            },
+            {
+                path: 'talent-search',
+                name: 'talent-search',
+                component: () => import('../views/dashboard/company/TalentSearchView.vue'),
                 meta: { roles: ['company', 'vc'] }
             },
         ]
@@ -120,6 +137,10 @@ router.beforeEach(async (to, from, next) => {
     const auth_store = use_auth_store();
 
     // Proteger rutas
+    if (!auth_store.user && localStorage.getItem('token')) {
+        await auth_store.refresh();
+    }
+
     if (to.meta.requires_auth && !auth_store.is_authenticated) {
         console.log(from);
         return next({ name: 'login' });

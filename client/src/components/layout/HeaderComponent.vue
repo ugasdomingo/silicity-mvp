@@ -26,7 +26,6 @@ defineEmits(['toggle-sidebar']);
 const auth_store = use_auth_store();
 
 const handle_logout = () => {
-    // Ahora usamos la acción logout del store
     auth_store.logout();
 };
 </script>

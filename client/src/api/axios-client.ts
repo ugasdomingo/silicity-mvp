@@ -28,7 +28,7 @@ api_client.interceptors.request.use(
 // Interceptor de Response (Mantenemos la lógica de UI que ya aprobaste)
 api_client.interceptors.response.use(
     (response) => {
-        if (response.config.method !== 'get' && response.data?.message && response.data?.status === 'success') {
+        if (response.config.method !== 'get' && response.data?.message && response.data?.status === 'success' && response.data.message !== 'OK') {
             const ui_store = use_ui_store();
             ui_store.show_toast(response.data.message, 'success');
         }

@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { use_auth_store } from '../../stores/auth-store';
-import { LayoutDashboard, GraduationCap, Briefcase, Search, Wallet, UserCircle } from 'lucide-vue-next';
+import { LayoutDashboard, GraduationCap, Briefcase, Search, Wallet, UserCircle, Users } from 'lucide-vue-next';
 
 // Recibimos estado desde el padre
 defineProps<{ is_open: boolean }>();
@@ -46,16 +46,22 @@ const all_menu_items = [
         roles: ['user', 'student', 'talent', 'company', 'vc', 'Admin']
     },
     {
-        label: 'Mis Becas',
-        route: 'scholarships', // Crearemos esta ruta luego
+        label: 'Becas',
+        route: 'scholarships',
         icon: GraduationCap,
-        roles: ['student', 'talent']
+        roles: ['user', 'student', 'talent']
+    },
+    {
+        label: 'Grupos de Estudio',
+        route: 'study-groups-list',
+        icon: Users,
+        roles: ['user', 'student', 'talent']
     },
     {
         label: 'Proyectos Reales',
-        route: 'projects',
+        route: 'projects-list',
         icon: Briefcase,
-        roles: ['talent']
+        roles: ['user', 'student', 'talent']
     },
     {
         label: 'Buscar Talento',

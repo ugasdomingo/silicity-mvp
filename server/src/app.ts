@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import { createServer } from 'http'; // Importamos módulo nativo HTTP
 import { connect_db } from './config/db';
 import { error_handler } from './middleware/error-handler';
@@ -19,9 +19,6 @@ import study_group_router from './routes/study-group-routes';
 import appointment_router from './routes/appointment-routes';
 import talent_router from './routes/talent-routes';
 import admin_scholarship_router from './routes/admin-scholarship-routes';
-
-// Cargar variables de entorno
-dotenv.config();
 
 // Inicializar DB
 connect_db();

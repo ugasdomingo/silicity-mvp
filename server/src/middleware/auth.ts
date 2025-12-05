@@ -20,7 +20,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-        (req as any).user_id = decoded;
+        (req as any).user_id = (decoded as any).user_id;
         next();
     } catch (error) {
         return next(new AppError('Token inválido', 401));

@@ -5,8 +5,11 @@
                 <h2>Grupos de Estudio</h2>
                 <p class="subtitle">Aprende en comunidad. Únete a un grupo o crea el tuyo.</p>
             </div>
-            <AppButtonComponent @click="show_create_modal = true">
+            <AppButtonComponent v-if="can_interact" @click="show_create_modal = true">
                 + Crear Grupo
+            </AppButtonComponent>
+            <AppButtonComponent v-else variant="secondary" @click="go_to_upgrade" title="Solo miembros Basic/Premium">
+                🔒 Crear Grupo
             </AppButtonComponent>
         </div>
 
@@ -59,10 +62,16 @@
                         Entrar al Chat
                     </AppButtonComponent>
 
-                    <AppButtonComponent v-else variant="outline" @click="handle_join(group._id)"
-                        :loading="joining_id === group._id">
-                        Unirme al Grupo
-                    </AppButtonComponent>
+                    <template v-else>
+                        <AppButtonComponent v-if="can_interact" variant="outline" @click="handle_join(group._id)"
+                            :loading="joining_id === group._id">
+                            Unirme al Grupo
+                        </AppButtonComponent>
+
+                        <AppButtonComponent v-else variant="secondary" @click="go_to_upgrade">
+                            🔒 Unirme (Basic)
+                        </AppButtonComponent>
+                    </template>
                 </div>
             </div>
         </div>
@@ -70,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { use_groups_store } from '../../../../stores/study-groups-store';
 import { use_auth_store } from '../../../../stores/auth-store';
@@ -90,13 +99,24 @@ const new_group = reactive({
     description: ''
 });
 
-// Carga inicial
+// ✅ Computed para verificar si puede interactuar (Basic o superior)
+const can_interact = computed(() => {
+    const role = auth_store.user?.role;
+    // Roles permitidos: student, talent, admin (company/vc no deberían estar aquí, pero user es el bloqueado)
+    return ['student', 'talent', 'Admin'].includes(role || '');
+});
+
+const go_to_upgrade = () => {
+    if (confirm('Esta función requiere una membresía Basic o superior. ¿Quieres ver los planes?')) {
+        router.push({ name: 'payment-selection' });
+    }
+};
+
 onMounted(() => {
     groups_store.fetch_groups();
 });
 
 const is_member = (group: any) => {
-    // Verificamos si el ID del usuario actual está en la lista de miembros (que son objetos o strings)
     const my_id = auth_store.user?._id;
     return group.members.some((m: any) => (m._id || m) === my_id);
 };
@@ -104,7 +124,6 @@ const is_member = (group: any) => {
 const handle_create = async () => {
     await groups_store.create_group(new_group);
     show_create_modal.value = false;
-    // Reset form
     new_group.name = '';
     new_group.topic = '';
     new_group.description = '';
@@ -147,7 +166,7 @@ const go_to_chat = (group_id: string) => {
     }
 }
 
-/* Panel de Creación (Inline simplificado) */
+/* Panel de Creación */
 .create-panel {
     background: white;
     padding: 1.5rem;

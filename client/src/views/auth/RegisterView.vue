@@ -13,6 +13,7 @@ const form = reactive({
     email: '',
     password: '',
     role: 'user', // Default
+    terms_and_privacy_accepted: false,
     website: ''   // Solo para B2B
 });
 
@@ -65,7 +66,19 @@ const handle_submit = () => {
                 <AppInputComponent id="password" v-model="form.password" type="password" placeholder="Contraseña"
                     required />
 
-                <AppButtonComponent type="submit" :loading="auth_store.is_loading">
+                <div class="terms-checkbox">
+                    <label class="checkbox-label">
+                        <input type="checkbox" v-model="form.terms_and_privacy_accepted" required />
+                        <span>
+                            Acepto los
+                            <router-link :to="{ name: 'terms' }" target="_blank">Términos</router-link> y
+                            <router-link :to="{ name: 'privacy' }" target="_blank">Política de Privacidad</router-link>
+                        </span>
+                    </label>
+                </div>
+
+                <AppButtonComponent type="submit" :loading="auth_store.is_loading"
+                    v-show="form.terms_and_privacy_accepted">
                     {{ button_text }}
                 </AppButtonComponent>
             </form>
@@ -106,6 +119,37 @@ h2 {
 .subtitle {
     color: $color-text-light;
     margin-bottom: 1.5rem;
+}
+
+.terms-checkbox {
+    margin-bottom: 1.5rem;
+    text-align: left;
+    font-size: 0.9rem;
+    color: $color-text-light;
+
+    .checkbox-label {
+        display: flex;
+        align-items: flex-start; // Alinea arriba si el texto es largo
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+        margin-top: 0.25rem; // Ajuste fino para alinear con el texto
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+    }
+
+    a {
+        color: $color-primary;
+        text-decoration: none;
+        font-weight: 500;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
 }
 
 .footer-text {

@@ -69,8 +69,8 @@ export const use_auth_store = defineStore('auth', () => {
     const logout = () => {
         user.value = null;
         access_token.value = '';
-        localStorage.removeItem('refresh_token');
-        router.push({ name: 'login' });
+        localStorage.removeItem('token');
+        router.push({ name: 'home' });
     };
 
     // Helper interno para guardar sesión
@@ -80,9 +80,23 @@ export const use_auth_store = defineStore('auth', () => {
 
         // Guardamos Refresh Token en LocalStorage (Persistencia a largo plazo)
         if (auth_data.refresh_token) {
-            localStorage.setItem('refresh_token', auth_data.refresh_token);
+            localStorage.setItem('token', auth_data.refresh_token);
         }
     };
+
+    const refresh = async () => {
+        is_loading.value = true;
+        try {
+            const refresh_token = localStorage.getItem('token')
+            const { data } = await api_client.post('/api/auth/refresh', { 'refresh_token': refresh_token });
+
+            _set_session(data.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            is_loading.value = false;
+        }
+    }
 
     return {
         user,
@@ -92,6 +106,7 @@ export const use_auth_store = defineStore('auth', () => {
         register,
         verify_email,
         login,
-        logout
+        logout,
+        refresh
     };
 });

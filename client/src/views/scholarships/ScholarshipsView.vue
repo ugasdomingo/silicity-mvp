@@ -177,6 +177,6 @@ h3 {
 
 .locked-btn {
     border: 1px solid $color-warning;
-    color: darken($color-warning, 10%);
+    color: shade($color-warning, 10%);
 }
 </style>

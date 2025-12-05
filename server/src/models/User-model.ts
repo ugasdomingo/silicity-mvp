@@ -51,7 +51,7 @@ const user_schema = new Schema<IUser>(
             unique: true,
             lowercase: true,
             match: [
-                /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+                /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/,
                 'Por favor ingrese un email válido',
             ],
         },
