@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { get_all_scholarships, create_scholarship, apply_to_scholarship, get_my_applications } from '../controllers/scholarship-controller';
+import { validate } from '../middleware/validation-middleware';
+import { create_scholarship_schema, apply_scholarship_schema } from '../schemas/scholarship-schemas';
+import { get_all_scholarships, create_scholarship, apply_to_scholarship, get_my_applications, approved_applications } from '../controllers/scholarship-controller';
 import { protect, restrict_to } from '../middleware/auth';
 import { AppError } from '../utils/app-error';
 import User from '../models/User-model';
@@ -26,9 +28,10 @@ scholarship_router.get('/', get_all_scholarships);
 // Rutas Protegidas
 scholarship_router.use(protect);
 scholarship_router.get('/my-applications', get_my_applications);
-scholarship_router.post('/:id/apply', require_membership, apply_to_scholarship);
+scholarship_router.post('/:id/apply', require_membership, validate(apply_scholarship_schema), apply_to_scholarship);
 
 //Solo Admin
-scholarship_router.post('/', restrict_to('Admin'), create_scholarship);
+scholarship_router.post('/', restrict_to('Admin'), validate(create_scholarship_schema), create_scholarship);
+scholarship_router.get('/approved-applications', restrict_to('Admin'), approved_applications);
 
 export default scholarship_router;

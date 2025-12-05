@@ -82,3 +82,14 @@ export const get_my_applications = async (req: Request, res: Response, next: Nex
         next(error);
     }
 };
+
+// @desc    Count Approved Applications (Admin)
+// @route   GET /api/scholarships/applications-approved
+export const approved_applications = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const approved_applications = await Application.find({ 'status': 'approved' }).lean();
+        send_response(res, 200, 'OK', { count: approved_applications?.length });
+    } catch (error) {
+        next(error);
+    }
+}

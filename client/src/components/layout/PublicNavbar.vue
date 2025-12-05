@@ -70,26 +70,40 @@
 
 .nav-link {
     color: $color-text;
+    font-size: 0.75rem;
     font-weight: 500;
     text-decoration: none;
+    text-align: center;
     transition: color 0.2s;
 
     &:hover {
         color: $color-primary;
+    }
+
+    @media (min-width: $breakpoint-desktop) {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
     }
 }
 
 .btn-register {
     background-color: $color-primary;
     color: white;
-    padding: 0.5rem 1.25rem;
+    padding: 0.5rem 0.75rem;
     border-radius: $radius-md;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 400;
     text-decoration: none;
+    text-align: center;
     transition: background 0.2s;
 
     &:hover {
         background-color: $color-primary-dark;
+    }
+
+    @media (min-width: $breakpoint-desktop) {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
     }
 }
 </style>

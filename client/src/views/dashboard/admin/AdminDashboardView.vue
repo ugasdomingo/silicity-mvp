@@ -7,12 +7,16 @@
 
         <div class="stats-grid">
             <div class="stat-card">
+                <span class="label">Usuarios Registrados</span>
+                <span class="value">0</span>
+            </div>
+            <div class="stat-card">
                 <span class="label">Pendientes de Revisión</span>
                 <span class="value">{{ scholarships_store.pending_applications.length }}</span>
             </div>
             <div class="stat-card">
-                <span class="label">Becas Otorgadas</span>
-                <span class="value">3/10</span>
+                <span class="label">Becas Otorgadas para 2026</span>
+                <span class="value">{{ scholarships_store.approved_applications | 0 }}/20</span>
             </div>
         </div>
 
@@ -81,6 +85,7 @@ const processing = ref<string | null>(null); // ID de la app que se está proces
 
 const load_data = async () => {
     await scholarships_store.get_pending_applications();
+    await scholarships_store.get_approved_applications();
 };
 
 const handle_evaluate = async (app: any, status: 'approved' | 'rejected') => {

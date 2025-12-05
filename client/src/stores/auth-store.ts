@@ -10,9 +10,31 @@ export const use_auth_store = defineStore('auth', () => {
     const user = ref<any | null>(null);
     const access_token = ref<string>('');
     const is_loading = ref(false);
+    const refresh_timeout = ref<any>(null);
+    const show_timeout = computed(() => refresh_timeout.value !== null);
 
     // Getters
     const is_authenticated = computed(() => !!access_token.value);
+
+    // Helpers
+    const _start_refresh_timer = () => {
+        // Limpiar timer anterior si existe para evitar duplicados
+        _stop_refresh_timer();
+
+        // Configurar para 14 minutos (14 * 60 * 1000 ms)
+        const time_until_refresh = 14 * 60 * 1000;
+
+        refresh_timeout.value = setTimeout(async () => {
+            await refresh();
+        }, time_until_refresh);
+    };
+
+    const _stop_refresh_timer = () => {
+        if (refresh_timeout.value) {
+            clearTimeout(refresh_timeout.value);
+            refresh_timeout.value = null;
+        }
+    };
 
     // Acciones
     const register = async (form_data: any) => {
@@ -75,13 +97,11 @@ export const use_auth_store = defineStore('auth', () => {
 
     // Helper interno para guardar sesión
     const _set_session = (auth_data: any) => {
-        user.value = auth_data.user;
+        user.value = auth_data.user_data;
         access_token.value = auth_data.access_token;
+        localStorage.setItem('token', auth_data.refresh_token);
 
-        // Guardamos Refresh Token en LocalStorage (Persistencia a largo plazo)
-        if (auth_data.refresh_token) {
-            localStorage.setItem('token', auth_data.refresh_token);
-        }
+        _start_refresh_timer();
     };
 
     const refresh = async () => {
@@ -91,8 +111,11 @@ export const use_auth_store = defineStore('auth', () => {
             const { data } = await api_client.post('/api/auth/refresh', { 'refresh_token': refresh_token });
 
             _set_session(data.data);
+            console.log(data.data)
+
         } catch (error) {
             console.error(error);
+            logout();
         } finally {
             is_loading.value = false;
         }
@@ -102,6 +125,7 @@ export const use_auth_store = defineStore('auth', () => {
         user,
         access_token,
         is_loading,
+        show_timeout,
         is_authenticated,
         register,
         verify_email,

@@ -159,7 +159,12 @@ router.beforeEach(async (to, from, next) => {
 
     // Redirigir si ya está logueado (Auth pages)
     if (auth_store.is_authenticated && ['login', 'register', 'home'].includes(to.name as string)) {
-        if (to.name !== 'home') return next({ name: 'dashboard' });
+        if (to.name !== 'home') {
+            if (auth_store.user?.role === 'Admin') {
+                return next({ name: 'admin-dashboard' })
+            }
+            return next({ name: 'dashboard' })
+        }
     }
 
     next();

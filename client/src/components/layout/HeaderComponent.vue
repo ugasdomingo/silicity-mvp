@@ -4,7 +4,7 @@
             <button class="menu-btn" @click="$emit('toggle-sidebar')">
                 <MenuIcon />
             </button>
-            <h3>Bienvenido</h3>
+            <h4>"{{ header_messages[Math.floor(Math.random() * header_messages.length)] }}"</h4>
         </div>
 
         <div class="header__right">
@@ -18,7 +18,8 @@
 <script setup lang="ts">
 import { use_auth_store } from '../../stores/auth-store';
 import AppButtonComponent from '../common/AppButtonComponent.vue';
-import { Menu as MenuIcon } from 'lucide-vue-next'; // Icono de menú
+import { Menu as MenuIcon } from 'lucide-vue-next';
+import { header_messages } from '../../static/header-messages';
 
 // Definimos los eventos que emite este componente
 defineEmits(['toggle-sidebar']);
@@ -53,7 +54,18 @@ const handle_logout = () => {
 .header__left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0;
+
+    h4 {
+        font-size: 0.75rem;
+        font-style: italic;
+        opacity: 0.6;
+        text-align: center;
+
+        @media (min-width: $breakpoint-desktop) {
+            font-size: 1rem;
+        }
+    }
 }
 
 .menu-btn {

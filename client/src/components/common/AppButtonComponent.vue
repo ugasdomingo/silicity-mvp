@@ -22,11 +22,16 @@ defineProps<{
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 0.75rem;
     font-weight: 600;
+    font-size: 0.5rem;
     border-radius: $radius-md;
     transition: all 0.2s;
-    width: 100%; // Por defecto full width en MVP, ajustar según necesidad
+    width: fit-content;
+
+    span {
+        padding: 0;
+    }
 
     &:disabled {
         opacity: 0.7;
@@ -64,6 +69,13 @@ defineProps<{
 @keyframes spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@media (min-width: $breakpoint-desktop) {
+    .btn {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
     }
 }
 </style>

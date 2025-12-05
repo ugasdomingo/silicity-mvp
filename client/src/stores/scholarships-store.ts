@@ -7,6 +7,7 @@ export const use_scholarships_store = defineStore('scholarships', () => {
     const scholarships = ref<any[]>([]);
     // Admin state
     const pending_applications = ref<any[]>([]);
+    const approved_applications = ref(0);
 
     const is_loading = ref(false);
     const ui_store = use_ui_store();
@@ -40,7 +41,7 @@ export const use_scholarships_store = defineStore('scholarships', () => {
     const get_pending_applications = async () => {
         is_loading.value = true;
         try {
-            const { data } = await api_client.get('/api/admin/scholarships/applications');
+            const { data } = await api_client.get('/api/admin-scholarships/applications');
             pending_applications.value = data.data;
         } catch (error) {
             console.error(error);
@@ -65,13 +66,27 @@ export const use_scholarships_store = defineStore('scholarships', () => {
         }
     };
 
+    const get_approved_applications = async () => {
+        is_loading.value = true;
+        try {
+            const { data } = await api_client.get('/api/scholarships/approved-applications');
+            approved_applications.value = data.count
+        } catch (error) {
+            console.error(error);
+        } finally {
+            is_loading.value = false;
+        }
+    }
+
     return {
         scholarships,
         pending_applications,
+        approved_applications,
         is_loading,
         get_all_scholarships,
         apply_to_scholarship,
         get_pending_applications,
-        evaluate_application
+        evaluate_application,
+        get_approved_applications
     };
 });
