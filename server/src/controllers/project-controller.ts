@@ -16,54 +16,55 @@ import { send_email } from '../utils/mailer';
 // @desc    Crear Proyecto (Con bloqueo de 3 meses)
 export const create_project = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const user_id = (req as any).user_id;
+        const user = req.user!;
+
+        // 🛡️ SEGURIDAD: Solo empresas APROBADAS pueden publicar
+        if (user.account_status === 'pending_approval') {
+            return next(new AppError('Tu cuenta está en revisión. No puedes publicar proyectos hasta ser aprobado.', 403));
+        }
 
         // 1. Validar regla de 3 meses
         const three_months_ago = new Date();
         three_months_ago.setMonth(three_months_ago.getMonth() - 3);
 
         const recent_project = await Project.findOne({
-            company_id: user_id,
+            company_id: user._id,
             created_at: { $gte: three_months_ago }
         });
 
-        // Permitir si es el primero o ya pasó el tiempo
         if (recent_project) {
             return next(new AppError('Solo puedes publicar un proyecto cada 3 meses para garantizar calidad.', 400));
         }
 
-        const company = await User.findById(user_id)
-
         // 2. Crear
         const project = new Project({
-            company_id: user_id,
+            company_id: user._id,
             ...req.body,
-            status: 'pending_review'
+            status: 'pending_review' // Siempre entra en revisión primero
         });
 
         await project.save();
 
-        // 🔔 NOTIFICACIÓN ADMIN: Nuevo Proyecto (Requiere Aprobación)
-        const admin_email = process.env.SMTP_USER as string;
+        // 🔔 ALERTA ADMIN (Usando la lógica centralizada de emails)
+        // Nota: Asegúrate de que ADMIN_EMAIL esté en tu .env
+        const admin_email = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+
         await send_email(
-            admin_email,
+            admin_email as string,
             `🚀 Nuevo Proyecto B2B: ${project.title}`,
             'admin-alert',
             {
                 alert_title: 'Solicitud de Proyecto Nuevo',
-                message_body: 'Una empresa ha enviado una propuesta de proyecto que requiere tu aprobación para publicarse.',
+                message_body: 'Una empresa ha enviado una propuesta de proyecto que requiere tu aprobación.',
                 details: [
-                    { key: 'Empresa', value: company?.name || 'N/A' },
-                    { key: 'Título', value: project?.title || 'N/A' },
-                    { key: 'ID Proyecto', value: project?._id || 'N/A' },
+                    { key: 'Empresa', value: user.name },
+                    { key: 'Título', value: project.title },
                     { key: 'Estado', value: 'Pendiente de Revisión' }
                 ],
-                // Link para que el Admin vaya directo a aprobar
-                action_url: `${process.env.CLIENT_URL}/app/dashboard/admin/projects`,
+                action_url: `${process.env.CLIENT_URL}/dashboard/admin/projects`,
                 action_text: 'Revisar Proyecto'
             }
         );
-
 
         send_response(res, 201, 'Proyecto enviado a revisión.', project);
     } catch (error) {
@@ -74,7 +75,7 @@ export const create_project = async (req: Request, res: Response, next: NextFunc
 // @desc    Mis Proyectos (Empresa)
 export const get_my_company_projects = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const user_id = (req as any).user_id;
+        const user_id = req.user!._id;
         const projects = await Project.find({ company_id: user_id })
             .populate('participating_groups')
             .sort('-created_at');
@@ -88,7 +89,7 @@ export const get_my_company_projects = async (req: Request, res: Response, next:
 // @route   POST /api/projects/deliveries/:id/evaluate
 export const evaluate_delivery = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const company_id = (req as any).user_id;
+        const company_id = req.user!._id
         const delivery_id = req.params.id;
         const { rating, feedback_text, ip_purchase_interested, hiring_interested } = req.body;
 
@@ -147,13 +148,13 @@ export const evaluate_delivery = async (req: Request, res: Response, next: NextF
 export const get_project_deliveries = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const company_id = (req as any).user_id;
+        const company_id = req.user!._id
 
         // Validar propiedad
         const project = await Project.findById(id);
         if (!project) return next(new AppError('Proyecto no encontrado', 404));
 
-        if (project.company_id.toString() !== company_id) {
+        if (project.company_id !== company_id) {
             return next(new AppError('No tienes permiso para ver estas entregas', 403));
         }
 
@@ -187,7 +188,7 @@ export const get_open_projects = async (req: Request, res: Response, next: NextF
 // @desc    Postularse
 export const apply_to_project = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const user_id = (req as any).user_id;
+        const user_id = req.user!._id
         const project_id = req.params.id;
         const { mode, desired_role, motivation } = req.body;
 
@@ -215,7 +216,7 @@ export const apply_to_project = async (req: Request, res: Response, next: NextFu
 // @route   POST /api/projects/:id/deliver
 export const deliver_project = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const user_id = (req as any).user_id;
+        const user_id = req.user!._id
         const project_id = req.params.id;
         const { documentation_link, repo_link, demo_link } = req.body;
 
@@ -294,7 +295,7 @@ export const deliver_project = async (req: Request, res: Response, next: NextFun
 // @route   POST /api/projects/:id/peer-review
 export const submit_peer_review = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const reviewer_id = (req as any).user_id;
+        const reviewer_id = req.user!._id
         const project_id = req.params.id;
         const { reviewed_id, ratings, comment } = req.body;
 

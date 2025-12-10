@@ -6,6 +6,7 @@ export interface IUser extends Document {
     email: string;
     password: string;
     role: 'user' | 'student' | 'talent' | 'company' | 'vc' | 'Admin';
+    account_status: 'active' | 'pending_approval' | 'suspended';
     payment_status: 'unpaid' | 'pending' | 'active' | 'free_trial';
     is_verified: boolean;
     verification_code: string;
@@ -65,6 +66,11 @@ const user_schema = new Schema<IUser>(
             type: String,
             enum: ['user', 'student', 'talent', 'company', 'vc', 'Admin'],
             default: 'user', // Por defecto entran al plan gratuito
+        },
+        account_status: {
+            type: String,
+            enum: ['active', 'pending_approval', 'suspended'],
+            default: 'active', // Por defecto es activo
         },
         payment_status: {
             type: String,

@@ -10,8 +10,13 @@ import { send_email } from '../utils/mailer';
 // @desc    Buscar Talento (Lógica Híbrida: Postulantes + Top Talent)
 export const search_talent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const company_id = (req as any).user_id;
+        const user = req.user!
+        const company_id = user._id
         const { skill, role } = req.query;
+
+        if (user.role === 'company' && user.account_status !== 'active') {
+            return next(new AppError('Debes esperar la aprobación de tu cuenta para ver nuestra base de talento.', 403));
+        }
 
         // 1. Identificar Postulantes (Talento Interesado en la Empresa)
         // Buscamos proyectos de esta empresa
@@ -96,9 +101,14 @@ export const search_talent = async (req: Request, res: Response, next: NextFunct
 // ... (express_interest se mantiene igual que en la versión anterior)
 export const express_interest = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const company_id = (req as any).user_id;
+        const user = req.user!
+        const company_id = user._id
         const talent_id = req.params.id;
         const { message } = req.body;
+
+        if (user.account_status !== 'active') {
+            return next(new AppError('Tu cuenta no está activa para contactar talento.', 403));
+        }
 
         const talent = await User.findById(talent_id);
         if (!talent) return next(new AppError('Talento no encontrado', 404));

@@ -22,6 +22,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
         let final_role = 'user';
         let payment_status = 'active'; // Default para Free User
+        let account_status = 'active';
         let company_info = {};
 
         // 2. Asignación de Roles y Beneficios
@@ -30,6 +31,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         if (role && ['company', 'vc'].includes(role)) {
             final_role = role;
             payment_status = 'free_trial'; // ¡Acceso total inmediato!
+            account_status = 'pending_approval';
 
             company_info = {
                 description: '',
@@ -56,6 +58,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             password,
             role: final_role,
             payment_status,
+            account_status,
             verification_code,
             is_verified: false,
             terms_and_privacy_accepted,
@@ -75,7 +78,30 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             }
         );
 
-        send_response(res, 201, 'Te enviamos un enlace de verificación a tu correo.');
+        if (account_status === 'pending_approval') {
+            await send_email(
+                process.env.ADMIN_EMAIL as string,
+                `🏢 Nueva Empresa Registrada: ${name}`,
+                'admin-alert',
+                {
+                    alert_title: 'Solicitud de Empresa Pendiente',
+                    message_body: `La empresa ${name} se ha registrado y requiere aprobación manual.`,
+                    details: [
+                        { key: 'Email', value: email },
+                        { key: 'Web', value: website || 'N/A' },
+                        { key: 'Rol', value: final_role }
+                    ],
+                    action_url: `${process.env.CLIENT_URL}/dashboard/admin/users`, // Tu panel admin
+                    action_text: 'Revisar Solicitud'
+                }
+            );
+        }
+
+        const message = account_status === 'pending_approval'
+            ? 'Registro exitoso. Tu cuenta de empresa está en revisión. Te notificaremos cuando sea aprobada.'
+            : 'Te enviamos un enlace de verificación a tu correo.';
+
+        send_response(res, 201, message);
     } catch (error) {
         next(error);
     }
@@ -134,6 +160,11 @@ export const verify_email = async (req: Request, res: Response, next: NextFuncti
             }
         );
 
+        // Si es empresa pendiente, no logueamos automáticamente, avisamos
+        if (user.account_status === 'pending_approval') {
+            return send_response(res, 200, 'Correo verificado. Tu cuenta espera aprobación del administrador.');
+        }
+
         // Generamos token para que entre directo (Auto-Login)
         const response_data = await get_login_user_data(user);
 
@@ -164,7 +195,14 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return next(new AppError('Debes verificar tu correo electrónico antes de iniciar sesión', 401));
         }
 
-        // El servicio se encarga de todo
+        // 🔒 BLOQUEO DE CUENTAS PENDIENTES O SUSPENDIDAS
+        if (user.account_status === 'pending_approval') {
+            return next(new AppError('Tu cuenta de empresa está en revisión. Te avisaremos al aprobarla.', 403));
+        }
+        if (user.account_status === 'suspended') {
+            return next(new AppError('Tu cuenta ha sido suspendida. Contacta a soporte.', 403));
+        }
+
         const response_data = await get_login_user_data(user);
 
         send_response(res, 200, 'Bienvenido(a) de vuelta', response_data);
@@ -190,7 +228,10 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
             return next(new AppError('Usuario no encontrado', 401));
         }
 
-        // Al llamar al servicio, generamos NUEVOS tokens automáticamente (rotación)
+        if (user.account_status !== 'active') {
+            return next(new AppError('Cuenta suspendida, contactanos para más información', 401))
+        }
+
         const response_data = await get_login_user_data(user);
 
         send_response(res, 200, 'OK', response_data);

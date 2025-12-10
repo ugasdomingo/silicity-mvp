@@ -1,54 +1,48 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import fs from 'fs';
 import path from 'path';
 import handlebars from 'handlebars';
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: true, // true para puerto 465 (SSL)
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+// Inicializar Resend con la API Key del .env
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Helper genérico para leer y compilar templates
-const get_template_html = (template_name: string, data: any): string => {
-    const template_path = path.join(__dirname, `../templates/${template_name}.html`);
+// Helper para leer templates (ahora con promesas para no bloquear el Event Loop)
+const get_template_html = async (template_name: string, data: any): Promise<string> => {
+    try {
+        const template_path = path.join(__dirname, `../templates/${template_name}.html`);
+        // Lectura asíncrona
+        const source = await fs.promises.readFile(template_path, 'utf-8');
+        const template = handlebars.compile(source);
 
-    // Leemos el archivo
-    const source = fs.readFileSync(template_path, 'utf-8');
-
-    // Compilamos con Handlebars
-    const template = handlebars.compile(source);
-
-    // Inyectamos datos globales (como la URL de la app)
-    const final_data = {
-        ...data,
-        app_url: process.env.CLIENT_URL || 'http://localhost:5173'
-    };
-
-    return template(final_data);
+        return template({
+            ...data,
+            app_url: process.env.CLIENT_URL || 'http://localhost:5173'
+        });
+    } catch (error) {
+        console.error(`❌ Error leyendo template ${template_name}:`, error);
+        throw new Error('Error interno procesando el correo');
+    }
 };
 
-// Función genérica de envío
 export const send_email = async (to: string, subject: string, template_name: string, data: any) => {
     try {
-        await transporter.verify();
+        const html = await get_template_html(template_name, data);
 
-        const html = get_template_html(template_name, data);
-
-        const info = await transporter.sendMail({
-            from: `"Equipo Silicity" <${process.env.SMTP_USER}>`,
-            to,
-            subject,
-            html,
+        // Envío usando la API de Resend
+        const { data: email_data, error } = await resend.emails.send({
+            from: process.env.EMAIL_FROM || 'Silicity <onboarding@resend.dev>',
+            to: [to], // Resend espera un array
+            subject: subject,
+            html: html,
         });
 
-        console.log(`✅ Correo enviado a ${to} (Template: ${template_name}, ID: ${info.messageId})`);
+        if (error) {
+            console.error('❌ Error Resend:', error);
+            return;
+        }
+
+        console.log(`✅ Correo enviado a ${to} (ID: ${email_data?.id})`);
     } catch (error) {
-        console.error(`❌ Error enviando email (${template_name}):`, error);
-        // No lanzamos error para no romper flujos críticos, pero logueamos
+        console.error(`❌ Error general enviando email (${template_name}):`, error);
     }
 };
