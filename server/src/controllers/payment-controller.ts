@@ -4,6 +4,7 @@ import Payment from '../models/Payment-model';
 import { AppError } from '../utils/app-error';
 import { send_response } from '../utils/response-handler';
 import { get_paypal_access_token } from '../utils/paypal-client';
+import { get_login_user_data } from '../services/auth-service';
 
 // Precios hardcodeados por seguridad (Backend manda)
 const PLAN_PRICES = {
@@ -16,7 +17,7 @@ const PLAN_PRICES = {
 export const create_paypal_order = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { plan } = req.body; // 'student' o 'talent'
-        const user_id = (req as any).user.user_id; // Viene del middleware auth
+        const user_id = req.user!._id;
 
         if (!['student', 'talent'].includes(plan)) {
             return next(new AppError('Plan inválido', 400));
@@ -71,13 +72,11 @@ export const capture_paypal_order = async (req: Request, res: Response, next: Ne
         const { order_id } = req.body;
         const user_id = (req as any).user.user_id;
 
-        // Buscar pago local pendiente
         const payment = await Payment.findOne({ paypal_order_id: order_id, user_id });
         if (!payment) return next(new AppError('Orden no encontrada', 404));
 
         const access_token = await get_paypal_access_token();
 
-        // Llamada a PayPal para cobrar realmente
         const response = await fetch(`${process.env.PAYPAL_API_URL}/v2/checkout/orders/${order_id}/capture`, {
             method: 'POST',
             headers: {
@@ -88,24 +87,33 @@ export const capture_paypal_order = async (req: Request, res: Response, next: Ne
 
         const data = await response.json() as any;
 
-        if (!response.ok || data.status !== 'COMPLETED') {
-            payment.status = 'failed';
-            await payment.save();
-            return next(new AppError('El pago no pudo ser procesado', 400));
+        if (!response.ok || (data.status !== 'COMPLETED')) {
+            if (data.status !== 'COMPLETED') {
+                payment.status = 'failed';
+                await payment.save();
+                return next(new AppError('El pago no pudo ser procesado por PayPal', 400));
+            }
         }
 
-        // ÉXITO: Actualizamos pago y usuario
+        // ÉXITO
         payment.status = 'completed';
         await payment.save();
 
         const user = await User.findById(user_id);
-        if (user) {
-            user.role = payment.plan as 'student' | 'talent'; // Upgrade automático
-            user.payment_status = 'active';
-            await user.save();
-        }
+        if (!user) return next(new AppError('Usuario no encontrado', 404));
 
-        send_response(res, 200, 'Pago exitoso, membresía activada', { role: user?.role });
+        // Actualizar Rol y Estado
+        user.role = payment.plan as 'student' | 'talent';
+        user.payment_status = 'active';
+        await user.save();
+
+        // ✅ AQUI ESTÁ LA CLAVE: 
+        // Generamos la respuesta estándar de autenticación con los nuevos permisos
+        // Esto devuelve { user_data, access_token, refresh_token }
+        const response_data = await get_login_user_data(user);
+
+        send_response(res, 200, 'Pago exitoso, membresía activada', response_data);
+
     } catch (error) {
         next(error);
     }

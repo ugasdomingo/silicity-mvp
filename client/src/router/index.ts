@@ -45,10 +45,15 @@ const routes = [
         meta: { requires_auth: true },
         children: [
             {
+                path: 'payment',
+                name: 'payment',
+                component: () => import('../views/payment/PaymentSelectionView.vue'),
+            },
+            {
                 path: 'admin',
                 name: 'admin-dashboard',
                 component: () => import('../views/dashboard/admin/AdminDashboardView.vue'),
-                meta: { roles: ['Admin'] } // Meta para el guard
+                meta: { roles: ['Admin'] }
             },
             {
                 path: 'dashboard', // /app/dashboard
@@ -144,6 +149,15 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.requires_auth && !auth_store.is_authenticated) {
         console.log(from);
         return next({ name: 'login' });
+    }
+
+    if (auth_store.is_authenticated && to.meta.requires_auth) {
+        const user = auth_store.user;
+        const needs_payment = ['student', 'talent'].includes(user?.role) && user?.payment_status !== 'active';
+
+        if (needs_payment && to.name !== 'payment') {
+            return next({ name: 'payment' });
+        }
     }
 
     // Proteger rutas de administrador

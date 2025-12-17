@@ -36,6 +36,21 @@ export const use_auth_store = defineStore('auth', () => {
         }
     };
 
+    // Helper para decidir a dónde ir según el estado
+    const _handle_post_auth_redirect = () => {
+        // Si es estudiante o talento Y no ha pagado -> A PAGAR
+        if (
+            ['student', 'talent'].includes(user.value?.role) &&
+            user.value?.payment_status !== 'active'
+        ) {
+            // Asumiendo que la ruta se llama 'payment' o 'plans'
+            router.push({ name: 'payment' });
+        } else {
+            // Flujo normal (Dashboard)
+            router.push({ name: 'dashboard' });
+        }
+    };
+
     // Acciones
     const register = async (form_data: any) => {
         is_loading.value = true;
@@ -56,13 +71,14 @@ export const use_auth_store = defineStore('auth', () => {
         is_loading.value = true;
         try {
             const { data } = await api_client.post('/api/auth/verify', { email, code });
-            _set_session(data.data);
+            set_session(data.data);
 
             //Notify success 
             ui_store.show_toast('Registro confirmado, Bienvenido(a)', 'success')
 
-            //Send to dashboard
-            router.push({ name: 'dashboard' });
+            //Decidir a dónde ir
+            _handle_post_auth_redirect();
+
         } catch (error) {
             console.error(error);
         } finally {
@@ -74,13 +90,13 @@ export const use_auth_store = defineStore('auth', () => {
         is_loading.value = true;
         try {
             const { data } = await api_client.post('/api/auth/login', credentials);
-            _set_session(data.data);
+            set_session(data.data);
 
             //Notify success 
             ui_store.show_toast('Bienvenido(a) de vuelta', 'success')
 
-            //Send to dashboard
-            router.push({ name: 'dashboard' });
+            //Decidir a dónde ir
+            _handle_post_auth_redirect();
         } catch (error) {
             console.error(error);
         } finally {
@@ -96,7 +112,7 @@ export const use_auth_store = defineStore('auth', () => {
     };
 
     // Helper interno para guardar sesión
-    const _set_session = (auth_data: any) => {
+    const set_session = (auth_data: any) => {
         user.value = auth_data.user_data;
         access_token.value = auth_data.access_token;
         localStorage.setItem('token', auth_data.refresh_token);
@@ -110,7 +126,7 @@ export const use_auth_store = defineStore('auth', () => {
             const refresh_token = localStorage.getItem('token')
             const { data } = await api_client.post('/api/auth/refresh', { 'refresh_token': refresh_token });
 
-            _set_session(data.data);
+            set_session(data.data);
             console.log(data.data)
 
         } catch (error) {
@@ -131,6 +147,7 @@ export const use_auth_store = defineStore('auth', () => {
         verify_email,
         login,
         logout,
-        refresh
+        refresh,
+        set_session
     };
 });

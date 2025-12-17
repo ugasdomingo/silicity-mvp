@@ -52,13 +52,14 @@ import { ref, onMounted, watch } from 'vue';
 import { loadScript } from '@paypal/paypal-js';
 import api_client from '../../api/axios-client';
 import { use_ui_store } from '../../stores/ui-store';
+import { use_auth_store } from '../../stores/auth-store';
 import { useRouter } from 'vue-router';
 import AppInputComponent from '../../components/common/AppInputComponent.vue';
 import AppButtonComponent from '../../components/common/AppButtonComponent.vue';
 
 const router = useRouter();
 const ui_store = use_ui_store();
-
+const auth_store = use_auth_store();
 const selected_plan = ref<'student' | 'talent'>('student');
 const method = ref<'paypal' | 'offline'>('paypal');
 const offline_ref = ref('');
@@ -93,9 +94,10 @@ const render_paypal_button = async () => {
             // Capturar Pago
             onApprove: async (data, _actions) => {
                 try {
-                    await api_client.post('/api/payments/paypal/capture-order', {
+                    const res = await api_client.post('/api/payments/paypal/capture-order', {
                         order_id: data.orderID
                     });
+                    auth_store.set_session(res.data.data);
                     ui_store.show_toast('¡Pago exitoso! Bienvenido(a).', 'success');
                     router.push({ name: 'dashboard' });
                 } catch (err) {

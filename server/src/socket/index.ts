@@ -1,42 +1,46 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { socket_auth_middleware } from './socket-middleware';
+import { register_chat_handlers } from './handlers/chat-handler';
 
 let io: SocketIOServer | null = null;
 
 export const initialize_socket_io = (httpServer: HttpServer) => {
     io = new SocketIOServer(httpServer, {
         cors: {
-            origin: process.env.CLIENT_URL || '*', // En producción esto debe ser estricto
+            origin: process.env.CLIENT_URL || '*',
             methods: ['GET', 'POST'],
             credentials: true
-        }
+        },
+        transports: ['websocket', 'polling'] // Asegurar compatibilidad
     });
 
-    // Aplicar Middleware de Auth
+    // 1. Middleware Global de Autenticación (JWT)
     io.use(socket_auth_middleware);
 
+    // 2. Manejo de Conexiones
     io.on('connection', (socket: Socket) => {
         console.log(`🔌 Socket Connected: ${socket.id} (User: ${socket.user?.user_id})`);
 
-        // Unir al usuario a una sala privada con su ID
-        // Esto permite enviar notificaciones privadas: io.to(userId).emit(...)
+        // A. Sala Privada del Usuario (para notificaciones personales futuras)
         if (socket.user?.user_id) {
             socket.join(socket.user.user_id);
         }
 
-        // Manejo básico de desconexión
+        // B. Registrar Handlers de Funcionalidades
+        // Aquí delegamos la lógica del chat al handler específico
+        register_chat_handlers(io!, socket);
+
+        // C. Manejo de Desconexión
         socket.on('disconnect', () => {
+            // Opcional: Podríamos emitir 'user_offline' a los grupos activos si quisiéramos presence system
             console.log(`❌ Socket Disconnected: ${socket.id}`);
         });
-
-        // Aquí importaremos luego los handlers específicos (chat, notificaciones)
     });
 
     return io;
 };
 
-// Función helper para obtener la instancia de IO desde controladores
 export const get_io = () => {
     if (!io) {
         throw new Error('Socket.io not initialized!');

@@ -23,6 +23,7 @@ export const get_login_user_data = async (user: IUser) => {
             email: user.email,
             role: user.role,
             is_verified: user.is_verified,
+            payment_status: user.payment_status,
 
             // Datos extendidos (Placeholders por ahora)
             scholarships: [],       // Becas aprobadas

@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { io, Socket } from 'socket.io-client';
 import { use_auth_store } from '../stores/auth-store';
+import { use_ui_store } from '../stores/ui-store';
 
 // Singleton del socket: Una única conexión para toda la app
 let socket: Socket | null = null;
@@ -9,6 +10,7 @@ export const useChat = (group_id: string) => {
     const messages = ref<any[]>([]);
     const is_typing = ref(false);
     const auth_store = use_auth_store();
+    const ui_store = use_ui_store();
     let typing_timeout: any = null;
 
     // Inicializar conexión
@@ -62,6 +64,13 @@ export const useChat = (group_id: string) => {
                         is_typing.value = false;
                     }, 3000);
                 }
+            });
+
+            //Escuchar errores
+            socket.on('error', (err: any) => {
+                console.error('Socket Error:', err);
+                ui_store.show_toast(err.message || 'Error de conexión', 'error');
+                // Opcional: Redirigir si es error crítico
             });
         }
     };

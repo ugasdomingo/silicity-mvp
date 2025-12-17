@@ -30,8 +30,8 @@ export const send_email = async (to: string, subject: string, template_name: str
 
         // Envío usando la API de Resend
         const { data: email_data, error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM || 'Silicity <onboarding@resend.dev>',
-            to: [to], // Resend espera un array
+            from: process.env.EMAIL_FROM || 'Silicity <info@noreply.silicity.digital>',
+            to: to,
             subject: subject,
             html: html,
         });
