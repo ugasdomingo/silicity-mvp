@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+// ============================================
+// 📝 INTERFACE
+// ============================================
 export interface IUser extends Document {
     name: string;
     email: string;
@@ -10,6 +13,8 @@ export interface IUser extends Document {
     payment_status: 'unpaid' | 'pending' | 'active' | 'free_trial';
     is_verified: boolean;
     verification_code: string;
+    verification_code_expires?: Date;    // 🆕 Expiración del código
+    verification_attempts?: number;       // 🆕 Contador de intentos fallidos
     psych_evaluation: {
         status: string;
         report_url: string;
@@ -39,6 +44,9 @@ export interface IUser extends Document {
     match_password(entered_password: string): Promise<boolean>;
 }
 
+// ============================================
+// 📐 SCHEMA
+// ============================================
 const user_schema = new Schema<IUser>(
     {
         name: {
@@ -65,17 +73,17 @@ const user_schema = new Schema<IUser>(
         role: {
             type: String,
             enum: ['user', 'student', 'talent', 'company', 'vc', 'Admin'],
-            default: 'user', // Por defecto entran al plan gratuito
+            default: 'user',
         },
         account_status: {
             type: String,
             enum: ['active', 'pending_approval', 'suspended'],
-            default: 'active', // Por defecto es activo
+            default: 'active',
         },
         payment_status: {
             type: String,
             enum: ['unpaid', 'pending', 'active', 'free_trial'],
-            default: 'active', // Para 'user' es active por defecto (es gratis)
+            default: 'active',
         },
         is_verified: {
             type: Boolean,
@@ -85,20 +93,31 @@ const user_schema = new Schema<IUser>(
             type: String,
             select: false,
         },
+        // 🆕 Expiración del código de verificación (15 min desde creación)
+        verification_code_expires: {
+            type: Date,
+            select: false,
+        },
+        // 🆕 Contador de intentos fallidos de verificación (máx 5)
+        verification_attempts: {
+            type: Number,
+            default: 0,
+            select: false,
+        },
         psych_evaluation: {
             status: {
                 type: String,
                 enum: ['not_required', 'pending_payment', 'scheduled', 'passed', 'failed'],
                 default: 'not_required'
             },
-            report_url: String, // Link al Drive (Solo Admin/Empresa autorizada lo ve)
-            authorized_viewers: [{ type: Schema.Types.ObjectId, ref: 'User' }] // Empresas que pueden ver el reporte
+            report_url: String,
+            authorized_viewers: [{ type: Schema.Types.ObjectId, ref: 'User' }]
         },
         profile: {
             avatar: String,
-            headline: String, // "Fullstack Dev"
-            bio: String,      // Descripción de sí mismo
-            skills: [String], // Habilidades
+            headline: String,
+            bio: String,
+            skills: [String],
             social_links: {
                 linkedin: String,
                 github: String,
@@ -124,19 +143,30 @@ const user_schema = new Schema<IUser>(
     }
 );
 
-// Middleware: Encriptar password antes de guardar
-user_schema.pre('save', async function (next) {
+// ============================================
+// 🔐 MIDDLEWARE: Encriptar password
+// ============================================
+user_schema.pre('save', async function () {
     if (!this.isModified('password')) {
         return;
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+
 });
 
-// Método: Comparar password
+// ============================================
+// 🔑 MÉTODO: Comparar password
+// ============================================
 user_schema.methods.match_password = async function (entered_password: string): Promise<boolean> {
     return await bcrypt.compare(entered_password, this.password);
 };
+
+// ============================================
+// 📇 ÍNDICES
+// ============================================
+// Índice para búsqueda de talentos en vitrina
+user_schema.index({ role: 1, payment_status: 1, 'reputation.is_top_talent': 1 });
 
 const User = mongoose.model<IUser>('User', user_schema);
 export default User;

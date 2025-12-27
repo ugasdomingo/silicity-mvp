@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// ============================================
+// 📝 SCHEMAS DE AUTENTICACIÓN
+// ============================================
+
 export const register_schema = z.object({
     body: z.object({
         name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
@@ -9,7 +13,7 @@ export const register_schema = z.object({
             .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
             .regex(/[0-9]/, 'Debe contener al menos un número'),
         role: z.enum(['user', 'student', 'talent', 'company', 'vc', 'Admin']).optional(),
-        website: z.url().optional().or(z.literal('')), // Opcional pero si viene, debe ser URL
+        website: z.url().optional().or(z.literal('')),
         terms_and_privacy_accepted: z.literal(true, {
             error: 'Debes aceptar los términos y privacidad',
         }),
@@ -33,5 +37,12 @@ export const verify_email_schema = z.object({
 export const refresh_token_schema = z.object({
     body: z.object({
         refresh_token: z.string().min(1, 'Token de refresco requerido'),
+    }),
+});
+
+// 🆕 Schema para reenviar código de verificación
+export const resend_code_schema = z.object({
+    body: z.object({
+        email: z.email('Email inválido'),
     }),
 });
