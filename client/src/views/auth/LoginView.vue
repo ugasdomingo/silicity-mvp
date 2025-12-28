@@ -10,6 +10,9 @@
 
                 <AppInputComponent id="password" v-model="form.password" type="password" placeholder="Contraseña"
                     required />
+                <p class="forgot-link">
+                    <router-link :to="{ name: 'forgot-password' }">¿Olvidaste tu contraseña?</router-link>
+                </p>
 
                 <AppButtonComponent type="submit" :loading="auth_store.is_loading">
                     Entrar
@@ -67,6 +70,21 @@ const handle_submit = () => {
     .subtitle {
         color: #6b7280;
         margin-bottom: 1.5rem;
+    }
+}
+
+.forgot-link {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+
+    a {
+        color: #6b7280;
+        text-decoration: none;
+
+        &:hover {
+            color: #6366f1;
+            text-decoration: underline;
+        }
     }
 }
 

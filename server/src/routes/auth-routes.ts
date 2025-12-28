@@ -6,35 +6,39 @@ import {
     login_schema,
     verify_email_schema,
     refresh_token_schema,
-    resend_code_schema
+    resend_code_schema,
+    forgot_password_schema,
+    reset_password_schema
 } from '../schemas/auth-schemas';
 import {
     register,
     verify_email,
     login,
     refresh,
-    resend_verification_code
+    resend_verification_code,
+    forgot_password,
+    reset_password
 } from '../controllers/auth-controller';
 
 const auth_router = Router();
 
 // ============================================
-// 🔐 RUTAS DE AUTENTICACIÓN
+// 🔐 REGISTRO Y VERIFICACIÓN
 // ============================================
-
-// Registro - Rate limited para prevenir spam de cuentas
 auth_router.post('/register', auth_limiter, validate(register_schema), register);
-
-// Verificación de email - Rate limited para prevenir fuerza bruta en código
 auth_router.post('/verify', auth_limiter, validate(verify_email_schema), verify_email);
-
-// Reenviar código - Rate limited para prevenir spam de emails
 auth_router.post('/resend-code', auth_limiter, validate(resend_code_schema), resend_verification_code);
 
-// Login - Rate limited para prevenir fuerza bruta de credenciales
+// ============================================
+// 🔑 LOGIN Y REFRESH
+// ============================================
 auth_router.post('/login', auth_limiter, validate(login_schema), login);
-
-// Refresh Token - Rate limited para prevenir abuso de rotación de tokens
 auth_router.post('/refresh', auth_limiter, validate(refresh_token_schema), refresh);
+
+// ============================================
+// 🔄 RECUPERACIÓN DE CONTRASEÑA
+// ============================================
+auth_router.post('/forgot-password', auth_limiter, validate(forgot_password_schema), forgot_password);
+auth_router.post('/reset-password', auth_limiter, validate(reset_password_schema), reset_password);
 
 export default auth_router;

@@ -22,6 +22,7 @@ import study_group_router from './routes/study-group-routes';
 import appointment_router from './routes/appointment-routes';
 import talent_router from './routes/talent-routes';
 import admin_scholarship_router from './routes/admin-scholarship-routes';
+import admin_router from './routes/admin-routes';
 
 // ============================================
 // 🔧 CONFIGURACIÓN
@@ -114,6 +115,7 @@ app.use('/api/study-groups', study_group_router);
 app.use('/api/appointments', appointment_router);
 app.use('/api/talents', talent_router);
 app.use('/api/admin-scholarships', admin_scholarship_router);
+app.use('/api/admin', admin_router);
 
 // ============================================
 // ❌ MANEJO DE ERRORES

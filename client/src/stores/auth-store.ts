@@ -47,7 +47,11 @@ export const use_auth_store = defineStore('auth', () => {
             router.push({ name: 'payment' });
         } else {
             // Flujo normal (Dashboard)
-            router.push({ name: 'dashboard' });
+            if (user.value?.role === 'Admin') {
+                router.push({ name: 'admin-dashboard' });
+            } else {
+                router.push({ name: 'dashboard' });
+            }
         }
     };
 

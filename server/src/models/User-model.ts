@@ -8,6 +8,8 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    password_reset_token?: string;
+    password_reset_expires?: Date;
     role: 'user' | 'student' | 'talent' | 'company' | 'vc' | 'Admin';
     account_status: 'active' | 'pending_approval' | 'suspended';
     payment_status: 'unpaid' | 'pending' | 'active' | 'free_trial';
@@ -69,6 +71,14 @@ const user_schema = new Schema<IUser>(
             required: [true, 'Por favor ingrese una contraseña'],
             minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
             select: false,
+        },
+        password_reset_token: {
+            type: String,
+            select: false
+        },
+        password_reset_expires: {
+            type: Date,
+            select: false
         },
         role: {
             type: String,

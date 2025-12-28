@@ -46,3 +46,20 @@ export const resend_code_schema = z.object({
         email: z.email('Email inválido'),
     }),
 });
+
+export const forgot_password_schema = z.object({
+    body: z.object({
+        email: z.email('Email inválido'),
+    }),
+});
+
+export const reset_password_schema = z.object({
+    body: z.object({
+        token: z.string().min(1, 'Token requerido'),
+        email: z.email('Email inválido'),
+        password: z.string()
+            .min(8, 'La contraseña debe tener al menos 8 caracteres')
+            .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
+            .regex(/[0-9]/, 'Debe contener al menos un número'),
+    }),
+});

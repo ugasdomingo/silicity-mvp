@@ -7,11 +7,13 @@ import { generate_six_digits_code } from '../utils/code-generator';
 import { send_email } from '../utils/mailer';
 import { get_login_user_data } from '../services/auth-service';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 // ============================================
 // 🔐 CONSTANTES DE SEGURIDAD
 // ============================================
 const VERIFICATION_CODE_EXPIRY_MINUTES = 15; // Código válido por 15 minutos
+const PASSWORD_RESET_EXPIRY_MINUTES = 60; // Reset válido por 60 minutos
 const MAX_VERIFICATION_ATTEMPTS = 5;         // Máximo intentos antes de bloquear
 
 // ============================================
@@ -367,6 +369,136 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
         const response_data = await get_login_user_data(user);
 
         send_response(res, 200, 'OK', response_data);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ============================================
+// 6️⃣ RECUPERAR CONTRASEÑA
+// ============================================
+// @desc    Solicitar recuperación de contraseña
+// @route   POST /api/auth/forgot-password
+export const forgot_password = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email });
+
+        // Por seguridad, siempre respondemos igual (no revelamos si el email existe)
+        if (!user) {
+            return send_response(res, 200, 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
+        }
+
+        // Verificar que la cuenta esté activa
+        if (user.account_status === 'suspended') {
+            return send_response(res, 200, 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
+        }
+
+        // Generar token único
+        const reset_token = crypto.randomBytes(32).toString('hex');
+
+        // Hash del token para guardar en DB (más seguro)
+        const hashed_token = crypto
+            .createHash('sha256')
+            .update(reset_token)
+            .digest('hex');
+
+        // Guardar en usuario
+        user.password_reset_token = hashed_token;
+        user.password_reset_expires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000);
+        await user.save({ validateBeforeSave: false });
+
+        // Crear URL de reset
+        const reset_url = `${process.env.CLIENT_URL}/auth/reset-password?token=${reset_token}&email=${encodeURIComponent(email)}`;
+
+        // Enviar email
+        try {
+            await send_email(
+                user.email,
+                '🔑 Restablecer tu contraseña - Silicity',
+                'reset-password',
+                {
+                    user_name: user.name,
+                    reset_url,
+                    expiry_minutes: PASSWORD_RESET_EXPIRY_MINUTES
+                }
+            );
+
+            send_response(res, 200, 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
+        } catch (email_error) {
+            // Si falla el email, limpiamos los campos
+            user.password_reset_token = undefined;
+            user.password_reset_expires = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            console.error('[Auth] Error enviando email de reset:', email_error);
+            return next(new AppError('Error enviando el email. Por favor intenta más tarde.', 500));
+        }
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Restablecer contraseña con token
+// @route   POST /api/auth/reset-password
+export const reset_password = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { token, email, password } = req.body;
+
+        if (!token || !email || !password) {
+            return next(new AppError('Datos incompletos', 400));
+        }
+
+        // Hash del token recibido para comparar
+        const hashed_token = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        // Buscar usuario con token válido y no expirado
+        const user = await User.findOne({
+            email,
+            password_reset_token: hashed_token,
+            password_reset_expires: { $gt: Date.now() }
+        }).select('+password');
+
+        if (!user) {
+            return next(new AppError('Token inválido o expirado. Solicita un nuevo enlace.', 400));
+        }
+
+        // Validar que la nueva contraseña sea diferente
+        const is_same_password = await user.match_password(password);
+        if (is_same_password) {
+            return next(new AppError('La nueva contraseña debe ser diferente a la actual', 400));
+        }
+
+        // Actualizar contraseña
+        user.password = password;
+        user.password_reset_token = undefined;
+        user.password_reset_expires = undefined;
+        await user.save();
+
+        // Notificar al usuario
+        await send_email(
+            user.email,
+            '✅ Contraseña actualizada - Silicity',
+            'admin-alert',
+            {
+                alert_title: 'Contraseña Actualizada',
+                message_body: `Hola ${user.name}, tu contraseña ha sido cambiada exitosamente. Si no realizaste este cambio, contacta a soporte inmediatamente.`,
+                details: [
+                    { key: 'Fecha', value: new Date().toLocaleDateString('es-ES') },
+                    { key: 'Hora', value: new Date().toLocaleTimeString('es-ES') }
+                ],
+                action_url: `${process.env.CLIENT_URL}/auth/login`,
+                action_text: 'Iniciar Sesión'
+            }
+        );
+
+        send_response(res, 200, 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.');
+
     } catch (error) {
         next(error);
     }
