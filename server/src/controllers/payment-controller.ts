@@ -11,12 +11,56 @@ import {
 import { get_login_user_data } from '../services/auth-service';
 
 // ============================================
-// 💰 PRECIOS - ÚNICA FUENTE DE VERDAD
+// 💰 PRECIOS - ÚNICA FUENTE DE VERDAD (USD)
 // ============================================
 // Hardcodeados por seguridad (Backend manda, cliente no decide)
-const PLAN_PRICES: Record<string, number> = {
-    student: 15.00,
-    talent: 30.00
+// Sincronizado con client/src/static/payment-methods.ts
+
+type PlanKey = 'student_quarterly' | 'student_yearly' | 'talent_quarterly' | 'talent_yearly';
+type BasePlan = 'student' | 'talent';
+
+interface PlanConfig {
+    amount: number;
+    base_plan: BasePlan;
+    period: 'quarterly' | 'yearly';
+    description: string;
+}
+
+const PLAN_PRICES: Record<PlanKey, PlanConfig> = {
+    student_quarterly: {
+        amount: 15.00,
+        base_plan: 'student',
+        period: 'quarterly',
+        description: 'Membresía Student - 3 meses'
+    },
+    student_yearly: {
+        amount: 50.00,
+        base_plan: 'student',
+        period: 'yearly',
+        description: 'Membresía Student - 1 año'
+    },
+    talent_quarterly: {
+        amount: 30.00,
+        base_plan: 'talent',
+        period: 'quarterly',
+        description: 'Membresía Talent - 3 meses'
+    },
+    talent_yearly: {
+        amount: 100.00,
+        base_plan: 'talent',
+        period: 'yearly',
+        description: 'Membresía Talent - 1 año'
+    }
+};
+
+// Plans válidos para validación
+const VALID_PLANS = Object.keys(PLAN_PRICES) as PlanKey[];
+
+/**
+ * Valida si el plan es válido
+ */
+const isValidPlan = (plan: string): plan is PlanKey => {
+    return VALID_PLANS.includes(plan as PlanKey);
 };
 
 // ============================================
@@ -30,9 +74,11 @@ export const create_paypal_order = async (req: Request, res: Response, next: Nex
         const user_id = req.user!._id;
 
         // Validación de plan
-        if (!['student', 'talent'].includes(plan)) {
-            return next(new AppError('Plan inválido', 400));
+        if (!plan || !isValidPlan(plan)) {
+            return next(new AppError(`Plan inválido. Planes válidos: ${VALID_PLANS.join(', ')}`, 400));
         }
+
+        const plan_config = PLAN_PRICES[plan];
 
         // Verificar que el usuario no tenga ya una membresía activa
         const user = await User.findById(user_id);
@@ -40,7 +86,6 @@ export const create_paypal_order = async (req: Request, res: Response, next: Nex
             return next(new AppError('Ya tienes una membresía activa', 400));
         }
 
-        const price = PLAN_PRICES[plan];
         const access_token = await get_paypal_access_token();
 
         // Llamada a PayPal API v2
@@ -53,8 +98,11 @@ export const create_paypal_order = async (req: Request, res: Response, next: Nex
             body: JSON.stringify({
                 intent: 'CAPTURE',
                 purchase_units: [{
-                    amount: { currency_code: 'EUR', value: price.toFixed(2) },
-                    description: `Membresía Silicity ${plan.toUpperCase()}`,
+                    amount: {
+                        currency_code: 'USD',
+                        value: plan_config.amount.toFixed(2)
+                    },
+                    description: plan_config.description,
                     // Referencia interna para auditoría
                     custom_id: `${user_id}_${plan}_${Date.now()}`
                 }],
@@ -76,11 +124,14 @@ export const create_paypal_order = async (req: Request, res: Response, next: Nex
         // Guardamos intención de pago en BD local
         await Payment.create({
             user_id,
-            amount: price,
+            amount: plan_config.amount,
+            currency: 'USD',
             method: 'paypal',
             status: 'pending',
             paypal_order_id: order.id,
-            plan
+            plan: plan,  // Guardamos el plan completo (ej: 'student_quarterly')
+            period: plan_config.period,
+            base_plan: plan_config.base_plan
         });
 
         send_response(res, 201, 'Orden creada', { order_id: order.id });
@@ -119,10 +170,12 @@ export const capture_paypal_order = async (req: Request, res: Response, next: Ne
         // ============================================
         // 🔐 VALIDACIÓN 2: Obtener precio esperado del plan
         // ============================================
-        const expected_price = PLAN_PRICES[payment.plan];
-        if (!expected_price) {
+        const plan_key = payment.plan as PlanKey;
+        if (!isValidPlan(plan_key)) {
             return next(new AppError('Plan de pago inválido', 400));
         }
+
+        const expected_price = PLAN_PRICES[plan_key].amount;
 
         // ============================================
         // 💳 CAPTURAR EN PAYPAL
@@ -168,7 +221,7 @@ export const capture_paypal_order = async (req: Request, res: Response, next: Ne
             return next(new AppError('Error verificando el pago', 500));
         }
 
-        const validation = validate_captured_amount(order_details, expected_price, 'EUR');
+        const validation = validate_captured_amount(order_details, expected_price, 'USD');
 
         if (!validation.is_valid) {
             // ⚠️ ALERTA: Posible intento de fraude
@@ -198,7 +251,9 @@ export const capture_paypal_order = async (req: Request, res: Response, next: Ne
         }
 
         // Actualizar rol y estado de pago
-        user.role = payment.plan as 'student' | 'talent';
+        // Usamos el base_plan para el rol (student o talent)
+        const base_plan = PLAN_PRICES[plan_key].base_plan;
+        user.role = base_plan;
         user.payment_status = 'active';
         await user.save();
 
@@ -235,11 +290,11 @@ export const report_offline_payment = async (req: Request, res: Response, next: 
         }
 
         // Validar plan
-        if (!['student', 'talent'].includes(plan)) {
-            return next(new AppError('Plan inválido', 400));
+        if (!plan || !isValidPlan(plan)) {
+            return next(new AppError(`Plan inválido. Planes válidos: ${VALID_PLANS.join(', ')}`, 400));
         }
 
-        const price = PLAN_PRICES[plan];
+        const plan_config = PLAN_PRICES[plan];
 
         // Verificar que no exista ya un pago pendiente con esta referencia
         const existing_payment = await Payment.findOne({
@@ -254,11 +309,14 @@ export const report_offline_payment = async (req: Request, res: Response, next: 
         // Crear pago pendiente de revisión manual
         await Payment.create({
             user_id,
-            amount: price,
+            amount: plan_config.amount,
+            currency: 'USD',
             method: 'offline',
             status: 'pending',
             offline_reference: reference,
-            plan
+            plan: plan,
+            period: plan_config.period,
+            base_plan: plan_config.base_plan
         });
 
         // Actualizar usuario a "pending" (admin aprobará manualmente)
@@ -270,7 +328,8 @@ export const report_offline_payment = async (req: Request, res: Response, next: 
         console.log('[Payment] Pago offline reportado:', {
             user_id: user_id.toString(),
             reference,
-            plan
+            plan,
+            amount: plan_config.amount
         });
 
         send_response(res, 201, 'Pago reportado. Esperando validación del administrador.');

@@ -107,7 +107,7 @@ app.get('/health', (req: Request, res: Response) => {
 // 📡 RUTAS DE API
 // ============================================
 app.use('/api/auth', auth_router);
-app.use('/api/payment', payment_router);
+app.use('/api/payments', payment_router);
 app.use('/api/scholarships', scholarship_router);
 app.use('/api/users', user_router);
 app.use('/api/projects', project_router);
