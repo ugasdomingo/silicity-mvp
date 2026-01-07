@@ -20,12 +20,8 @@ const VALID_PLANS = [
  */
 export const create_paypal_order_schema = z.object({
     body: z.object({
-        plan: z.enum(VALID_PLANS, {
-            errorMap: () => ({
-                message: `Plan inválido. Planes válidos: ${VALID_PLANS.join(', ')}`
-            })
-        }),
-    }),
+        plan: z.enum(VALID_PLANS)
+    })
 });
 
 /**
@@ -47,12 +43,8 @@ export const offline_payment_schema = z.object({
         reference: z.string()
             .min(5, 'Referencia muy corta (mínimo 5 caracteres)')
             .max(100, 'Referencia muy larga (máximo 100 caracteres)'),
-        plan: z.enum(VALID_PLANS, {
-            errorMap: () => ({
-                message: `Plan inválido. Planes válidos: ${VALID_PLANS.join(', ')}`
-            })
-        }),
-    }),
+        plan: z.enum(VALID_PLANS)
+    })
 });
 
 // ============================================
