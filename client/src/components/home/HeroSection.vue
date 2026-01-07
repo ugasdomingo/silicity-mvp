@@ -33,7 +33,7 @@
 
                 <div class="trust-badges">
                     <div class="badge-item">
-                        <span class="check">✓</span> 10 becas anuales
+                        <span class="check">✓</span> Becas anuales
                     </div>
                     <div class="badge-item">
                         <span class="check">✓</span> Validación psicológica
@@ -91,6 +91,10 @@
     align-items: center;
     background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
     overflow: hidden;
+
+    @media (max-width: 992px) {
+        padding-top: 0.5rem;
+    }
 }
 
 .container {
