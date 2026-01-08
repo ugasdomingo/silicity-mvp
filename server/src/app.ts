@@ -36,6 +36,14 @@ if (IS_PRODUCTION && !process.env.CLIENT_URL) {
     process.exit(1);
 }
 
+const corsOptions = {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204 // IMPORTANTE para navegadores antiguos/proxies
+};
+
 // ============================================
 // 🚀 INICIALIZACIÓN
 // ============================================
@@ -71,12 +79,8 @@ app.use('/api', api_limiter);
 app.use(helmet());
 
 // CORS - Un solo origen desde variable de entorno
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'https://www.silicity.digital',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body Parser con límite de tamaño
 app.use(express.json({ limit: '10kb' }));
