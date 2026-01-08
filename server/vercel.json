@@ -1,27 +1,35 @@
 {
     "version": 2,
     "buildCommand": "npm run build",
-    "outputDirectory": "dist",
-    "builds": [
+    "installCommand": "npm install",
+    "framework": null,
+    "rewrites": [
         {
-            "src": "dist/app.js",
-            "use": "@vercel/node"
+            "source": "/(.*)",
+            "destination": "/dist/app.js"
         }
     ],
-    "routes": [
+    "headers": [
         {
-            "src": "/api/(.*)",
-            "dest": "dist/app.js",
-            "headers": {
-                "Access-Control-Allow-Origin": "https://www.silicity.digital",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-                "Access-Control-Allow-Credentials": "true"
-            }
-        },
-        {
-            "src": "/(.*)",
-            "dest": "dist/app.js"
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "https://www.silicity.digital"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization"
+                },
+                {
+                    "key": "Access-Control-Allow-Credentials",
+                    "value": "true"
+                }
+            ]
         }
     ]
 }
