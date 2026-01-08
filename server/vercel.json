@@ -1,5 +1,7 @@
 {
     "version": 2,
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
     "builds": [
         {
             "src": "dist/app.js",
@@ -8,7 +10,7 @@
     ],
     "routes": [
         {
-            "src": "/(.*)",
+            "src": "/api/(.*)",
             "dest": "dist/app.js",
             "headers": {
                 "Access-Control-Allow-Origin": "https://www.silicity.digital",
@@ -16,6 +18,10 @@
                 "Access-Control-Allow-Headers": "Content-Type, Authorization",
                 "Access-Control-Allow-Credentials": "true"
             }
+        },
+        {
+            "src": "/(.*)",
+            "dest": "dist/app.js"
         }
     ]
 }
