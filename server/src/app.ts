@@ -72,19 +72,7 @@ app.use(helmet());
 
 // CORS - Un solo origen desde variable de entorno
 app.use(cors({
-    origin: (origin, callback) => {
-        console.log('Origin recibido:', origin);
-        const allowed = [
-            'https://www.silicity.digital',
-            'https://silicity.digital',
-            'http://localhost:5173'
-        ];
-        if (!origin || allowed.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS no permitido'));
-        }
-    },
+    origin: process.env.CLIENT_URL || 'https://www.silicity.digital',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
